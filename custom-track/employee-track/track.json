@@ -1,0 +1,125 @@
+{
+  "version": 2,
+  "description": "Updated Track for benchmarking the employee index",
+  "name": "employee_bulk_query",
+  "indices": [
+    {
+      "name": "employee",
+      "body": "index.json"
+    }
+  ],
+  "corpora": [
+    {
+      "name": "employee-corpus",
+      "documents": [
+        {
+          "source-file": "employee.json",
+          "document-count": 1000000,
+          "raw-data-volume-per-day": "{{raw_data_volume_per_day}}"
+        }
+      ]
+    }
+  ],
+  "schedule": [
+    {
+      "operation": {
+        "operation-type": "delete-index"
+      }
+    },
+    {
+      "operation": {
+        "operation-type": "create-index"
+      }
+    },
+    {
+      "operation": {
+        "operation-type": "cluster-health",
+        "request-params": {
+          "wait_for_status": "yellow"
+        },
+        "retry-until-success": true
+      }
+    },
+    {
+      "operation": {
+        "operation-type": "bulk",
+        "bulk-size": {{bulk_indexing_clients | default('200')}}
+      },
+      "clients": {{data_index_clients | default('10')}}
+    },
+    {
+      "operation": {
+        "operation-type": "search",
+        "name": "match_all_query",
+        "index": "employee",
+        "body": {
+          "query": {
+            "match_all": {}
+          }
+        }
+      },
+      "clients": {{data_generation_clients | default('10')}},
+      "warmup-iterations": {{warmup_iterations | default(10)}},
+      "iterations": {{iterations | default(50)}},
+      "target-throughput": {{target_throughput | default(500)}}
+    },
+    {
+      "operation": {
+        "operation-type": "search",
+        "name": "term_query",
+        "index": "employee",
+        "body": {
+          "query": {
+            "term": {
+              "occupation": "Engineer"
+            }
+          }
+        }
+      },
+      "clients": {{data_generation_clients | default('10')}},
+      "warmup-iterations": {{warmup_iterations | default(10)}},
+      "iterations": {{iterations | default(50)}},
+      "target-throughput": {{target_throughput | default(500)}}
+    },
+    {
+      "operation": {
+        "operation-type": "search",
+        "name": "range_query",
+        "index": "employee",
+        "body": {
+          "query": {
+            "range": {
+              "age": {
+                "gte": 300,
+                "lte": 20
+              }
+            }
+          }
+        }
+      },
+      "clients": {{data_generation_clients | default('10')}},
+      "warmup-iterations": {{warmup_iterations | default(10)}},
+      "iterations": {{iterations | default(50)}},
+      "target-throughput": {{target_throughput | default(500)}}
+    },
+    {
+      "operation": {
+        "operation-type": "search",
+        "name": "multi_match_query",
+        "index": "employee",
+        "body": {
+          "query": {
+            "multi_match": {
+              "query": "John Doe",
+              "fields": ["first_name", "last_name"]
+            }
+          }
+        }
+      },
+      "clients": {{data_generation_clients | default('10')}},
+      "warmup-iterations": {{warmup_iterations | default(10)}},
+      "iterations": {{iterations | default(50)}},
+      "target-throughput": {{target_throughput | default(500)}}
+    }
+  ]
+}
